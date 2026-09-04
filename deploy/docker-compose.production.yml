@@ -11,6 +11,10 @@ services:
     image: ghcr.io/${GHCR_OWNER:-147196421}/loomic-web:${LOOMIC_IMAGE_TAG:-latest}
     pull_policy: always
     restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_SERVER_BASE_URL: ${NEXT_PUBLIC_SERVER_BASE_URL:?required}
+      NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:?required}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:?required}
     ports:
       - "127.0.0.1:${LOOMIC_WEB_BIND_PORT:-8925}:80"
     logging: *default-logging
