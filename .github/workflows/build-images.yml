@@ -60,16 +60,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Validate public build variables
-        env:
-          SERVER_URL: ${{ vars.NEXT_PUBLIC_SERVER_BASE_URL }}
-          SUPABASE_URL: ${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-        run: |
-          test -n "$SERVER_URL" || { echo "Missing repository variable NEXT_PUBLIC_SERVER_BASE_URL"; exit 1; }
-          test -n "$SUPABASE_URL" || { echo "Missing repository variable NEXT_PUBLIC_SUPABASE_URL"; exit 1; }
-          test -n "$SUPABASE_ANON_KEY" || { echo "Missing repository variable NEXT_PUBLIC_SUPABASE_ANON_KEY"; exit 1; }
-
       - uses: docker/setup-buildx-action@v3
 
       - name: Sign in to GHCR
@@ -85,10 +75,6 @@ jobs:
           context: .
           file: apps/web/Dockerfile
           push: true
-          build-args: |
-            NEXT_PUBLIC_SERVER_BASE_URL=${{ vars.NEXT_PUBLIC_SERVER_BASE_URL }}
-            NEXT_PUBLIC_SUPABASE_URL=${{ vars.NEXT_PUBLIC_SUPABASE_URL }}
-            NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ vars.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
           tags: |
             ghcr.io/${{ github.repository_owner }}/loomic-web:latest
             ghcr.io/${{ github.repository_owner }}/loomic-web:${{ github.sha }}
