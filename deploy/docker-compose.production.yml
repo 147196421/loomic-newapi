@@ -1,0 +1,82 @@
+name: loomic
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  web:
+    image: ghcr.io/${GHCR_OWNER:-147196421}/loomic-web:${LOOMIC_IMAGE_TAG:-latest}
+    pull_policy: always
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_SERVER_BASE_URL: ${NEXT_PUBLIC_SERVER_BASE_URL:?required}
+      NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:?required}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:?required}
+    ports:
+      - "127.0.0.1:${LOOMIC_WEB_BIND_PORT:-8925}:80"
+    logging: *default-logging
+    mem_limit: 512m
+    cpus: 0.50
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - loomic
+
+  api:
+    image: ghcr.io/${GHCR_OWNER:-147196421}/loomic-server:${LOOMIC_IMAGE_TAG:-latest}
+    pull_policy: always
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    environment:
+      SERVICE_MODE: api
+      HOST: 0.0.0.0
+      LOOMIC_SERVER_PORT: 3001
+      LOOMIC_SKILLS_ROOT: /opt/loomic/skills
+    ports:
+      - "127.0.0.1:${LOOMIC_API_BIND_PORT:-8926}:3001"
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "const s=require('net').connect(3001,'127.0.0.1');s.on('connect',()=>{s.end();process.exit(0)});s.on('error',()=>process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+    logging: *default-logging
+    mem_limit: 2g
+    cpus: 1.50
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - loomic
+
+  worker:
+    image: ghcr.io/${GHCR_OWNER:-147196421}/loomic-server:${LOOMIC_IMAGE_TAG:-latest}
+    pull_policy: always
+    restart: unless-stopped
+    env_file:
+      - .env.production
+    environment:
+      SERVICE_MODE: worker
+      WORKER_ID: production-w1
+      LOOMIC_SKILLS_ROOT: /opt/loomic/skills
+    depends_on:
+      api:
+        condition: service_healthy
+    logging: *default-logging
+    mem_limit: 4g
+    cpus: 2.00
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - loomic
+
+networks:
+  loomic:
+    driver: bridge
