@@ -1,22 +1,8 @@
 # Production deployment with GHCR
 
-This deployment avoids installing pnpm dependencies on the production server. GitHub Actions builds the web and server images; the server only pulls image layers.
+This deployment avoids installing pnpm dependencies on the production server. GitHub Actions builds reusable web and server images; the server only pulls image layers.
 
-## 1. Configure repository variables
-
-Before merging the deployment pull request, open:
-
-Settings > Secrets and variables > Actions > Variables
-
-Create these repository variables:
-
-- `NEXT_PUBLIC_SERVER_BASE_URL` — for example `https://api.example.com`
-- `NEXT_PUBLIC_SUPABASE_URL` — your Supabase project URL
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY` — the browser-safe Supabase anon key
-
-These values are compiled into the static web image. Do not put the service-role key, JWT secret, database password, or AI keys in repository variables.
-
-## 2. Build images
+## 1. Build images
 
 After the workflow is on `main`, either push a matching change or run **Build production images** manually from the Actions tab.
 
@@ -24,6 +10,8 @@ It publishes:
 
 - `ghcr.io/147196421/loomic-web:latest`
 - `ghcr.io/147196421/loomic-server:latest`
+
+The web image is built with safe placeholder values. Browser-safe URLs and the Supabase anon key are injected when the container starts, so GitHub repository variables are not required and configuration changes do not require rebuilding the image.
 
 Make the packages public in GitHub package settings, or authenticate the server with a fine-grained token that has read access to packages:
 
@@ -33,7 +21,7 @@ printf '%s' "$GHCR_READ_TOKEN" | docker login ghcr.io -u 147196421 --password-st
 
 Do not save the token in shell history or commit it to the repository.
 
-## 3. Configure the server
+## 2. Configure the server
 
 Copy the `deploy` directory to `/opt/loomic/deploy`, then:
 
@@ -45,7 +33,9 @@ chmod 600 .env.production
 
 Fill in the real Supabase and AI provider values. Never commit `.env.production`.
 
-## 4. Start or update
+Supabase is required before the full application can start because it provides authentication, database storage, object storage, and the PGMQ queue. AI provider keys may be changed later by updating `.env.production` and recreating the API and Worker containers.
+
+## 3. Start or update
 
 ```bash
 cd /opt/loomic/deploy
@@ -66,7 +56,7 @@ Configure the host reverse proxy with separate public hostnames. For example:
 
 Caddy and modern reverse proxies forward WebSockets automatically. For Nginx, make sure the API virtual host forwards the `Upgrade` and `Connection` headers.
 
-## 5. Operations
+## 4. Operations
 
 ```bash
 # Logs
