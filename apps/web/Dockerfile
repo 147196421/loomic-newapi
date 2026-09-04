@@ -14,9 +14,9 @@ RUN pnpm install --frozen-lockfile --ignore-scripts
 
 FROM deps AS builder
 
-ARG NEXT_PUBLIC_SERVER_BASE_URL
-ARG NEXT_PUBLIC_SUPABASE_URL
-ARG NEXT_PUBLIC_SUPABASE_ANON_KEY
+ARG NEXT_PUBLIC_SERVER_BASE_URL=https://runtime-api.invalid
+ARG NEXT_PUBLIC_SUPABASE_URL=https://runtime-supabase.invalid
+ARG NEXT_PUBLIC_SUPABASE_ANON_KEY=runtime-supabase-anon-key
 
 ENV NEXT_PUBLIC_SERVER_BASE_URL=$NEXT_PUBLIC_SERVER_BASE_URL
 ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
@@ -32,7 +32,10 @@ RUN pnpm --filter @loomic/shared build && pnpm --filter @loomic/web build
 FROM nginx:1.27-alpine AS production
 
 COPY apps/web/nginx.conf /etc/nginx/conf.d/default.conf
+COPY apps/web/40-runtime-config.sh /docker-entrypoint.d/40-runtime-config.sh
 COPY --from=builder /app/apps/web/out /usr/share/nginx/html
+
+RUN chmod 755 /docker-entrypoint.d/40-runtime-config.sh
 
 EXPOSE 80
 
